@@ -1,4 +1,6 @@
 import streamlit as st
+# Ara afegeix la configuració màgica (Línia 2):
+st.set_page_config(initial_sidebar_state="expanded")
 import os
 
 # -- CONFIGURACIÓ DE PÀGINA --
