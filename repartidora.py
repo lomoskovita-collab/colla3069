@@ -1,53 +1,52 @@
 import streamlit as st
 
-# Configuració bàsica
-st.set_page_config(page_title="Gestor 3069", page_icon="🍴")
+# 1. Configuració de la pàgina
+st.set_page_config(page_title="Gestor 3069", page_icon="🍴", layout="centered")
 
 st.title("🍴 Gestor de Dinars")
 st.subheader("All i oli i vinagreta")
+st.markdown("---")
 
-# Inicialització de la llista de participants
+# 2. Inicialització de dades
 if 'participants' not in st.session_state:
     st.session_state.participants = []
 
-# --- FORMULARI D'ENTRADA ---
+# 3. Formulari per afegir gent
 with st.form("entrada", clear_on_submit=True):
-    col_nom, col_import = st.columns([2, 1])
-    with col_nom:
-        nom = st.text_input("Nom del participant")
-    with col_import:
-        import_pagat = st.number_input("Pagat (€)", min_value=0.0, step=0.01)
+    c_nom, c_import = st.columns([2, 1])
+    with c_nom:
+        nom = st.text_input("Nom del participant (Ex: Ricard)")
+    with c_import:
+        imp = st.number_input("Pagat (€)", min_value=0.0, step=0.01, format="%.2f")
     
-    botó_afegir = st.form_submit_button("AFEGIR A LA LLISTA")
+    submit = st.form_submit_button("AFEGIR A LA LLISTA")
 
-if botó_afegir and nom:
-    st.session_state.participants.append({"nom": nom, "pagat": import_pagat})
+if submit and nom:
+    st.session_state.participants.append({"nom": nom, "pagat": imp})
+    st.rerun()
 
-# --- MOSTRAR DADES I ELIMINAR ---
+# 4. Llista i càlculs
 if st.session_state.participants:
-    st.write("---")
-    
     total = sum(p['pagat'] for p in st.session_state.participants)
     num = len(st.session_state.participants)
     per_cap = total / num if num > 0 else 0
 
-    st.info(f"**Total: {total:.2f} €** |  **Per cap: {per_cap:.2f} €**")
+    # Resum destacat
+    st.success(f"💰 **Total: {total:.2f} €** |  👤 **Per cap: {per_cap:.2f} €**")
     
-    st.markdown("### 📝 Llista de Participants")
-    
-    # Bucle per mostrar cada persona amb el seu botó d'eliminar
+    st.markdown("### 📝 Llista i correccions")
     for i, p in enumerate(st.session_state.participants):
         col1, col2, col3 = st.columns([3, 2, 1])
-        col1.write(f"👤 {p['nom']}")
+        col1.write(f"**{p['nom']}**")
         col2.write(f"{p['pagat']:.2f} €")
-        # El botó d'eliminar és aquí:
-        if col3.button("Borrar", key=f"btn_{i}"):
+        # Botó d'eliminar/editar
+        if col3.button("Borrar", key=f"del_{i}"):
             st.session_state.participants.pop(i)
             st.rerun()
 
-    # --- LIQUIDACIÓ DE DEUTES ---
-    st.write("---")
-    st.subheader("💰 Qui ha de pagar a qui:")
+    # 5. Liquidació (Qui deu a qui)
+    st.markdown("---")
+    st.subheader("⚖️ Balanç de comptes")
     
     deutes = []
     for p in st.session_state.participants:
@@ -57,21 +56,23 @@ if st.session_state.participants:
     pagadors = sorted([d for d in deutes if d['balanc'] < -0.01], key=lambda x: x['balanc'])
     cobradors = sorted([d for d in deutes if d['balanc'] > 0.01], key=lambda x: x['balanc'], reverse=True)
 
-    for p in pagadors:
-        deute_restant = abs(p['balanc'])
-        for c in cobradors:
-            if c['balanc'] <= 0: continue
-            import_transf = min(deute_restant, c['balanc'])
-            if import_transf > 0.01:
-                st.warning(f"👉 **{p['nom']}** ha de pagar **{import_transf:.2f} €** a **{c['nom']}**")
-                deute_restant -= import_transf
-                c['balanc'] -= import_transf
+    if not pagadors and not cobradors:
+        st.write("Tothom està al dia! ✅")
+    else:
+        for p in pagadors:
+            falta = abs(p['balanc'])
+            for c in cobradors:
+                if c['balanc'] <= 0: continue
+                donar = min(falta, c['balanc'])
+                if donar > 0.01:
+                    st.warning(f"**{p['nom']}** ha de pagar **{donar:.2f} €** a **{c['nom']}**")
+                    falta -= donar
+                    c['balanc'] -= donar
 
-    # Botó per netejar-ho tot
+    # Botó reset
     st.write("")
-    if st.button("Esborrar tota la llista"):
+    if st.button("Esborrar-ho tot i nou dinar"):
         st.session_state.participants = []
         st.rerun()
 else:
-    st.write("Encara no hi ha ningú a la llista. Comença a escriure noms!")
-        
+    st.info("La llista està buida. Afegeix el primer participant per començar!")
